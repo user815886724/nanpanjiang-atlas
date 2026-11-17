@@ -111,13 +111,56 @@
   }
   #close:hover { background:#fff; transform:scale(1.08); box-shadow:0 5px 20px rgba(0,0,0,0.35); }
   .nav[hidden], #close[hidden] { display:none; }
+
+  /* ===== 加载提示 ===== */
+  #loading {
+    position:fixed; inset:0;
+    z-index:30;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:14px;
+    background:#ffffff;
+    color:#666;
+    font-size:15px;
+    letter-spacing:.5px;
+    transition:opacity .45s ease;
+  }
+  #loading.done { opacity:0; pointer-events:none; }
+  .spinner {
+    width:30px; height:30px;
+    border:3px solid #e3e8ee;
+    border-top-color:#5b8def;
+    border-radius:50%;
+    animation:spin .85s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .hint {
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    z-index:6;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:12px;
+    min-width:190px; min-height:120px;
+    padding:24px 30px;
+    background:rgba(255,255,255,0.96);
+    border-radius:10px;
+    color:#555; font-size:14px;
+    box-shadow:0 10px 44px rgba(0,0,0,0.35);
+  }
 </style>
 </head>
 <body>
 
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loading-text">地图加载中…</div>
+</div>
+
 <div id="stage">
   <div id="canvas">
-    <img id="basemap" src="basemap.png" alt="">
+    <img id="basemap" src="basemap.webp" alt="" fetchpriority="high">
     <button class="hot" style="left:1150px;top:1088px" data-i="0" aria-label=""></button>
     <button class="hot" style="left:1726px;top:1099px" data-i="1" aria-label=""></button>
     <button class="hot" style="left:1205px;top:1135px" data-i="2" aria-label=""></button>
@@ -154,9 +197,9 @@ var MEDIA = [
   ["化鱼村黑臭坑塘图片1.jpg","化鱼村黑臭坑塘图片2.jpg","化鱼村黑臭坑塘图片3.jpg"], // 5 化鱼村黑臭坑塘（左下菱形）
   ["西河1.jpg","西河2.jpg"],                                              // 6  西河
   ["禄丰水电站.mp4"],                                                     // 7  禄丰水电站
-  ["大沟边河农田淹水.png","大沟边河农田淹水2.png"],                        // 8  大沟边河农田淹水
+  ["大沟边河农田淹水.jpg","大沟边河农田淹水2.jpg"],                        // 8  大沟边河农田淹水
   ["巡检司镇污水溢流.jpg","巡检司镇污水溢流视频.mp4"],                     // 9  巡检司镇污水溢流
-  ["小龙潭镇段山体滑坡.png"],                                             // 10 小龙潭镇段山体滑坡（左菱形）
+  ["小龙潭镇段山体滑坡.jpg"],                                             // 10 小龙潭镇段山体滑坡（左菱形）
   ["热电循环产业园区污水处理厂.mp4"],                                     // 11 热电循环产业园区污水处理厂（右菱形）
   ["小龙潭粪污直排1.jpg","小龙潭粪污直排2.jpg"],                           // 12 小龙潭镇粪污直排（左下菱形）
   ["开远县粪污直排1.jpg","开远县粪污直排2.jpg"]                            // 13 开远县粪污直排
@@ -231,19 +274,62 @@ function stopCurrent() {
   frame.innerHTML = '';
 }
 
+function showHint(text) {
+  var d = document.createElement('div');
+  d.className = 'hint';
+  d.innerHTML = '<div class="spinner"></div><div class="hint-text"></div>';
+  d.querySelector('.hint-text').textContent = text;
+  frame.appendChild(d);
+  return d;
+}
+
+function setHintText(hint, text) {
+  var t = hint && hint.querySelector('.hint-text');
+  if (t) t.textContent = text;
+}
+
 function render() {
   stopCurrent();
   if (!list.length) return;
   var name = list[cur];
   var el;
+
   if (/\.mp4$/i.test(name)) {
     el = document.createElement('video');
     el.src = name;
     el.controls = true;
     el.playsInline = true;
     el.setAttribute('playsinline', '');
+    el.preload = 'auto';
     el.loop = false;
     frame.appendChild(el);
+
+    var hint = showHint('视频加载中…');
+    var started = false;
+    var ready = function () {
+      if (started) return;
+      started = true;
+      hint.remove();
+    };
+    /* 任一就绪信号都撤掉提示；再加超时兜底，避免遮罩常驻 */
+    el.addEventListener('loadeddata', ready);
+    el.addEventListener('canplay', ready);
+    el.addEventListener('playing', ready);
+    el.addEventListener('timeupdate', ready);
+    setTimeout(ready, 15000);
+    el.addEventListener('progress', function () {
+      if (started) return;
+      try {
+        if (el.buffered && el.buffered.length && el.duration) {
+          var pct = Math.min(99, Math.round(el.buffered.end(el.buffered.length - 1) / el.duration * 100));
+          setHintText(hint, '视频缓冲中… ' + pct + '%');
+        }
+      } catch (err) {}
+    });
+    el.addEventListener('error', function () {
+      setHintText(hint, '视频加载失败，请检查网络后重试');
+    });
+
     /* 用户点击手势触发，优先带声音自动播放；若被浏览器拦截则静音播放 */
     var p = el.play();
     if (p && typeof p.catch === 'function') {
@@ -255,10 +341,14 @@ function render() {
     }
   } else {
     el = document.createElement('img');
-    el.src = name;
     el.alt = '';
     frame.appendChild(el);
+    var ihint = showHint('图片加载中…');
+    el.onload = function () { ihint.remove(); };
+    el.onerror = function () { setHintText(ihint, '图片加载失败，请检查网络后重试'); };
+    el.src = name;
   }
+
   var many = list.length > 1;
   prevBtn.hidden = !many;
   nextBtn.hidden = !many;
@@ -308,6 +398,26 @@ for (var j = 0; j < hots.length; j++) {
 
 window.addEventListener('resize', fit);
 fit();
+
+/* ===== 底图加载状态 ===== */
+var basemapEl = document.getElementById('basemap');
+var loadingEl = document.getElementById('loading');
+var loadingText = document.getElementById('loading-text');
+
+function basemapDone() {
+  loadingEl.classList.add('done');
+}
+
+if (basemapEl.complete && basemapEl.naturalWidth > 0) {
+  basemapDone();
+} else {
+  basemapEl.addEventListener('load', basemapDone);
+  basemapEl.addEventListener('error', function () {
+    var sp = loadingEl.querySelector('.spinner');
+    if (sp) sp.style.display = 'none';
+    loadingText.textContent = '底图加载失败，请确认网络后刷新页面';
+  });
+}
 </script>
 </body>
 </html>
