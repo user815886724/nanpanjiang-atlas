@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>汛期南盘江水系脉络图</title>
+<style>
+  html, body {
+    margin:0; padding:0;
+    width:100%; height:100%;
+    background:#ffffff;
+    overflow:hidden;
+  }
+  #stage {
+    position:relative;
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+    background:#ffffff;
+    cursor:grab;
+    touch-action:none;
+  }
+  #stage.grabbing { cursor:grabbing; }
+  #canvas {
+    position:absolute;
+    left:0; top:0;
+    width:3553px; height:3477px;
+    transform-origin:0 0;
+    will-change:transform;
+  }
+  #basemap {
+    display:block;
+    width:3553px; height:3477px;
+    -webkit-user-drag:none;
+    user-select:none;
+    pointer-events:none;
+  }
+  .hot {
+    position:absolute;
+    width:26px; height:44px;
+    background:transparent;
+    border:0; padding:0; margin:0;
+    cursor:pointer;
+    clip-path:polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  }
+
+  /* ===== 媒体查看层 ===== */
+  #viewer {
+    position:fixed;
+    inset:0;
+    z-index:10;
+    display:none;
+  }
+  #viewer.open { display:block; }
+  #mask {
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.30);
+  }
+  #media-frame {
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    z-index:11;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    max-width:calc(100vw - 190px);
+    max-height:86vh;
+  }
+  #media-frame img, #media-frame video {
+    display:block;
+    max-width:100%;
+    max-height:86vh;
+    width:auto; height:auto;
+    object-fit:contain;
+    background:#000;
+    box-shadow:0 10px 44px rgba(0,0,0,0.45);
+  }
+  .nav, #close {
+    position:absolute;
+    z-index:12;
+    border:0;
+    border-radius:50%;
+    background:rgba(255,255,255,0.92);
+    color:#222;
+    cursor:pointer;
+    box-shadow:0 3px 14px rgba(0,0,0,0.28);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1;
+    transition:background .18s ease, transform .18s ease, box-shadow .18s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .nav {
+    top:50%;
+    width:56px; height:56px;
+    font-size:36px;
+    padding-bottom:4px;
+  }
+  #prev { left:26px; transform:translateY(-50%); }
+  #next { right:26px; transform:translateY(-50%); }
+  #prev:hover { background:#fff; transform:translateY(-50%) scale(1.1); box-shadow:0 5px 20px rgba(0,0,0,0.35); }
+  #next:hover { background:#fff; transform:translateY(-50%) scale(1.1); box-shadow:0 5px 20px rgba(0,0,0,0.35); }
+  #close {
+    top:22px; right:24px;
+    width:44px; height:44px;
+    font-size:30px;
+    padding-bottom:3px;
+  }
+  #close:hover { background:#fff; transform:scale(1.08); box-shadow:0 5px 20px rgba(0,0,0,0.35); }
+  .nav[hidden], #close[hidden] { display:none; }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="canvas">
+    <img id="basemap" src="basemap.png" alt="">
+    <button class="hot" style="left:1150px;top:1088px" data-i="0" aria-label=""></button>
+    <button class="hot" style="left:1726px;top:1099px" data-i="1" aria-label=""></button>
+    <button class="hot" style="left:1205px;top:1135px" data-i="2" aria-label=""></button>
+    <button class="hot" style="left:1151px;top:1234px" data-i="3" aria-label=""></button>
+    <button class="hot" style="left:1179px;top:1267px" data-i="4" aria-label=""></button>
+    <button class="hot" style="left:1166px;top:1280px" data-i="5" aria-label=""></button>
+    <button class="hot" style="left:1134px;top:1347px" data-i="6" aria-label=""></button>
+    <button class="hot" style="left:1077px;top:1646px" data-i="7" aria-label=""></button>
+    <button class="hot" style="left:1098px;top:2060px" data-i="8" aria-label=""></button>
+    <button class="hot" style="left:1190px;top:2379px" data-i="9" aria-label=""></button>
+    <button class="hot" style="left:1192px;top:2549px" data-i="10" aria-label=""></button>
+    <button class="hot" style="left:1209px;top:2543px" data-i="11" aria-label=""></button>
+    <button class="hot" style="left:1157px;top:2602px" data-i="12" aria-label=""></button>
+    <button class="hot" style="left:1275px;top:2669px" data-i="13" aria-label=""></button>
+  </div>
+</div>
+
+<div id="viewer">
+  <div id="mask"></div>
+  <button id="prev" class="nav" aria-label="上一张">&#8249;</button>
+  <div id="media-frame"></div>
+  <button id="next" class="nav" aria-label="下一张">&#8250;</button>
+  <button id="close" aria-label="关闭">&#215;</button>
+</div>
+
+<script>
+/* 每个菱形点位对应的媒体文件（依据局部放大图校正点位对应关系） */
+var MEDIA = [
+  ["金家营养鸭场1.jpg","金家营养鸭场2.jpg"],                              // 0  金家营养鸭场
+  ["磷化工企业排口.mp4"],                                                 // 1  磷化工企业排口
+  ["下燕子窝涌水点.mp4"],                                                 // 2  下燕子窝涌水点
+  ["花城警苑黑臭水体.jpg"],                                               // 3  花城警苑黑臭水体
+  ["骆家营村污水直排1.jpg","骆家营村污水直排2.jpg","罗家营村污水直排3.jpg"], // 4 骆家营污水直排（右上菱形）
+  ["化鱼村黑臭坑塘图片1.jpg","化鱼村黑臭坑塘图片2.jpg","化鱼村黑臭坑塘图片3.jpg"], // 5 化鱼村黑臭坑塘（左下菱形）
+  ["西河1.jpg","西河2.jpg"],                                              // 6  西河
+  ["禄丰水电站.mp4"],                                                     // 7  禄丰水电站
+  ["大沟边河农田淹水.png","大沟边河农田淹水2.png"],                        // 8  大沟边河农田淹水
+  ["巡检司镇污水溢流.jpg","巡检司镇污水溢流视频.mp4"],                     // 9  巡检司镇污水溢流
+  ["小龙潭镇段山体滑坡.png"],                                             // 10 小龙潭镇段山体滑坡（左菱形）
+  ["热电循环产业园区污水处理厂.mp4"],                                     // 11 热电循环产业园区污水处理厂（右菱形）
+  ["小龙潭粪污直排1.jpg","小龙潭粪污直排2.jpg"],                           // 12 小龙潭镇粪污直排（左下菱形）
+  ["开远县粪污直排1.jpg","开远县粪污直排2.jpg"]                            // 13 开远县粪污直排
+];
+
+var stage = document.getElementById('stage');
+var canvas = document.getElementById('canvas');
+var viewer = document.getElementById('viewer');
+var mask = document.getElementById('mask');
+var frame = document.getElementById('media-frame');
+var prevBtn = document.getElementById('prev');
+var nextBtn = document.getElementById('next');
+var closeBtn = document.getElementById('close');
+var W = 3553, H = 3477;
+var scale = 1, tx = 0, ty = 0;
+var dragging = false, moved = false, sx = 0, sy = 0, stx = 0, sty = 0;
+var list = [], cur = 0, opened = false;
+
+function apply() {
+  canvas.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+}
+
+function fit() {
+  scale = Math.min(stage.clientWidth / W, stage.clientHeight / H);
+  tx = (stage.clientWidth - W * scale) / 2;
+  ty = (stage.clientHeight - H * scale) / 2;
+  apply();
+}
+
+stage.addEventListener('wheel', function (e) {
+  if (opened) return;
+  e.preventDefault();
+  var r = stage.getBoundingClientRect();
+  var px = e.clientX - r.left;
+  var py = e.clientY - r.top;
+  var factor = Math.exp(-e.deltaY * 0.0016);
+  var ns = Math.max(0.05, Math.min(10, scale * factor));
+  var k = ns / scale;
+  tx = px - (px - tx) * k;
+  ty = py - (py - ty) * k;
+  scale = ns;
+  apply();
+}, { passive:false });
+
+stage.addEventListener('pointerdown', function (e) {
+  if (opened || e.button !== 0) return;
+  dragging = true;
+  moved = false;
+  sx = e.clientX; sy = e.clientY;
+  stx = tx; sty = ty;
+  stage.classList.add('grabbing');
+});
+
+window.addEventListener('pointermove', function (e) {
+  if (!dragging) return;
+  var dx = e.clientX - sx, dy = e.clientY - sy;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+  tx = stx + dx; ty = sty + dy;
+  apply();
+});
+
+window.addEventListener('pointerup', function () {
+  dragging = false;
+  stage.classList.remove('grabbing');
+});
+
+function stopCurrent() {
+  var old = frame.querySelector('video');
+  if (old) {
+    try { old.pause(); old.removeAttribute('src'); old.load(); } catch (err) {}
+  }
+  frame.innerHTML = '';
+}
+
+function render() {
+  stopCurrent();
+  if (!list.length) return;
+  var name = list[cur];
+  var el;
+  if (/\.mp4$/i.test(name)) {
+    el = document.createElement('video');
+    el.src = name;
+    el.controls = true;
+    el.playsInline = true;
+    el.setAttribute('playsinline', '');
+    el.loop = false;
+    frame.appendChild(el);
+    /* 用户点击手势触发，优先带声音自动播放；若被浏览器拦截则静音播放 */
+    var p = el.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(function () {
+        el.muted = true;
+        var p2 = el.play();
+        if (p2 && typeof p2.catch === 'function') p2.catch(function () {});
+      });
+    }
+  } else {
+    el = document.createElement('img');
+    el.src = name;
+    el.alt = '';
+    frame.appendChild(el);
+  }
+  var many = list.length > 1;
+  prevBtn.hidden = !many;
+  nextBtn.hidden = !many;
+}
+
+function openViewer(i) {
+  list = MEDIA[i] || [];
+  if (!list.length) return;   /* 无媒体文件时不弹出 */
+  cur = 0;
+  opened = true;
+  viewer.classList.add('open');
+  render();
+}
+
+function closeViewer() {
+  if (!opened) return;
+  opened = false;
+  stopCurrent();
+  viewer.classList.remove('open');
+}
+
+function step(d) {
+  if (!opened || list.length < 2) return;
+  cur = (cur + d + list.length) % list.length;
+  render();
+}
+
+prevBtn.addEventListener('click', function (e) { e.stopPropagation(); step(-1); });
+nextBtn.addEventListener('click', function (e) { e.stopPropagation(); step(1); });
+closeBtn.addEventListener('click', function (e) { e.stopPropagation(); closeViewer(); });
+mask.addEventListener('click', closeViewer);
+document.addEventListener('keydown', function (e) {
+  if (!opened) return;
+  if (e.key === 'Escape') closeViewer();
+  else if (e.key === 'ArrowLeft') step(-1);
+  else if (e.key === 'ArrowRight') step(1);
+});
+
+var hots = document.querySelectorAll('.hot');
+for (var j = 0; j < hots.length; j++) {
+  hots[j].addEventListener('click', function (e) {
+    if (moved) return;
+    e.stopPropagation();
+    openViewer(parseInt(this.getAttribute('data-i'), 10));
+  });
+}
+
+window.addEventListener('resize', fit);
+fit();
+</script>
+</body>
+</html>
