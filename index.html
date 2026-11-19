@@ -3,421 +3,470 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>汛期南盘江水系脉络图</title>
+<title>汛期南盘江水系脉络图（交互版）</title>
 <style>
-  html, body {
-    margin:0; padding:0;
-    width:100%; height:100%;
-    background:#ffffff;
-    overflow:hidden;
-  }
-  #stage {
-    position:relative;
-    width:100vw;
-    height:100vh;
-    overflow:hidden;
-    background:#ffffff;
-    cursor:grab;
-    touch-action:none;
-  }
+  html, body { margin:0; padding:0; width:100%; height:100%; background:#fff; overflow:hidden; font-family:"Microsoft YaHei","PingFang SC",sans-serif; }
+  #stage { position:relative; width:100vw; height:100vh; overflow:hidden; background:#fff; cursor:grab; touch-action:none; -webkit-user-select:none; user-select:none; }
   #stage.grabbing { cursor:grabbing; }
-  #canvas {
-    position:absolute;
-    left:0; top:0;
-    width:3553px; height:3477px;
-    transform-origin:0 0;
-    will-change:transform;
-  }
-  #basemap {
-    display:block;
-    width:3553px; height:3477px;
-    -webkit-user-drag:none;
-    user-select:none;
-    pointer-events:none;
-  }
+  #canvas { position:absolute; left:0; top:0; width:3553px; height:3477px; transform-origin:0 0; will-change:transform; }
+  #basemap { display:block; width:3553px; height:3477px; -webkit-user-drag:none; user-select:none; pointer-events:none; }
   .hot {
-    position:absolute;
-    width:26px; height:44px;
-    background:transparent;
-    border:0; padding:0; margin:0;
+    position:absolute; width:25px; height:38px;
+    background:transparent; border:0; padding:0; margin:0;
     cursor:pointer;
     clip-path:polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  }
-
-  /* ===== 媒体查看层 ===== */
-  #viewer {
-    position:fixed;
-    inset:0;
-    z-index:10;
-    display:none;
-  }
-  #viewer.open { display:block; }
-  #mask {
-    position:absolute;
-    inset:0;
-    background:rgba(0,0,0,0.30);
-  }
-  #media-frame {
-    position:absolute;
-    top:50%; left:50%;
-    transform:translate(-50%,-50%);
-    z-index:11;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    max-width:calc(100vw - 190px);
-    max-height:86vh;
-  }
-  #media-frame img, #media-frame video {
-    display:block;
-    max-width:100%;
-    max-height:86vh;
-    width:auto; height:auto;
-    object-fit:contain;
-    background:#000;
-    box-shadow:0 10px 44px rgba(0,0,0,0.45);
-  }
-  .nav, #close {
-    position:absolute;
-    z-index:12;
-    border:0;
-    border-radius:50%;
-    background:rgba(255,255,255,0.92);
-    color:#222;
-    cursor:pointer;
-    box-shadow:0 3px 14px rgba(0,0,0,0.28);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    line-height:1;
-    transition:background .18s ease, transform .18s ease, box-shadow .18s ease;
     -webkit-tap-highlight-color:transparent;
   }
-  .nav {
-    top:50%;
-    width:56px; height:56px;
-    font-size:36px;
-    padding-bottom:4px;
+  #viewer { position:fixed; inset:0; z-index:20; display:none; }
+  #viewer.open { display:block; }
+  #mask { position:absolute; inset:0; background:rgba(0,0,0,0.30); }
+  #bar {
+    position:absolute; z-index:23; top:0; left:0; right:0;
+    height:64px; display:flex; align-items:center; justify-content:center;
+    color:#fff; pointer-events:none;
   }
-  #prev { left:26px; transform:translateY(-50%); }
-  #next { right:26px; transform:translateY(-50%); }
-  #prev:hover { background:#fff; transform:translateY(-50%) scale(1.1); box-shadow:0 5px 20px rgba(0,0,0,0.35); }
-  #next:hover { background:#fff; transform:translateY(-50%) scale(1.1); box-shadow:0 5px 20px rgba(0,0,0,0.35); }
+  #title { font-size:20px; font-weight:600; letter-spacing:1px; text-shadow:0 2px 10px rgba(0,0,0,.7); }
+  #counter { margin-left:12px; font-size:14px; opacity:.85; }
   #close {
-    top:22px; right:24px;
-    width:44px; height:44px;
-    font-size:30px;
-    padding-bottom:3px;
+    position:absolute; z-index:25; top:16px; right:20px;
+    width:44px; height:44px; border:0; border-radius:50%;
+    background:rgba(255,255,255,.94); color:#222; font-size:28px; line-height:1;
+    cursor:pointer; box-shadow:0 3px 14px rgba(0,0,0,.3);
   }
-  #close:hover { background:#fff; transform:scale(1.08); box-shadow:0 5px 20px rgba(0,0,0,0.35); }
-  .nav[hidden], #close[hidden] { display:none; }
-
-  /* ===== 加载提示 ===== */
-  #loading {
-    position:fixed; inset:0;
-    z-index:30;
-    display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
-    gap:14px;
-    background:#ffffff;
-    color:#666;
-    font-size:15px;
-    letter-spacing:.5px;
-    transition:opacity .45s ease;
+  #close:hover { background:#fff; transform:scale(1.07); }
+  .nav {
+    position:absolute; z-index:24; top:50%; transform:translateY(-50%);
+    width:58px; height:58px; border:0; border-radius:50%;
+    background:rgba(255,255,255,.94); color:#222; font-size:38px; line-height:1;
+    cursor:pointer; box-shadow:0 3px 14px rgba(0,0,0,.3);
   }
-  #loading.done { opacity:0; pointer-events:none; }
-  .spinner {
-    width:30px; height:30px;
-    border:3px solid #e3e8ee;
-    border-top-color:#5b8def;
-    border-radius:50%;
-    animation:spin .85s linear infinite;
+  #prevNav { left:20px; }
+  #nextNav { right:20px; }
+  .nav:hover { background:#fff; }
+  .nav[hidden] { display:none; }
+  #strip {
+    position:absolute; z-index:22; top:50%; left:50%; transform:translate(-50%,-50%);
+    display:flex; align-items:center; justify-content:center; gap:16px;
+    max-width:calc(100vw - 120px);
   }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  .hint {
-    position:absolute;
-    top:50%; left:50%;
-    transform:translate(-50%,-50%);
-    z-index:6;
-    display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
-    gap:12px;
-    min-width:190px; min-height:120px;
-    padding:24px 30px;
-    background:rgba(255,255,255,0.96);
-    border-radius:10px;
-    color:#555; font-size:14px;
-    box-shadow:0 10px 44px rgba(0,0,0,0.35);
+  #mainBox { display:flex; flex-direction:column; align-items:center; justify-content:center; width:max(260px, calc(100vw - 460px)); height:78vh; }
+  #mediaHolder { display:flex; align-items:center; justify-content:center; width:100%; flex:1 1 auto; min-height:0; position:relative; }
+  /* 弱网兜底：视频长时间起不来时给出直链，避免只看到黑屏 */
+  .slowTip {
+    position:absolute; left:50%; bottom:10px; transform:translateX(-50%);
+    display:flex; align-items:center; gap:10px; white-space:nowrap;
+    background:rgba(0,0,0,.72); color:#fff; font-size:13px;
+    padding:7px 13px; border-radius:6px; z-index:5;
+  }
+  .slowTip a { color:#7fc4ff; text-decoration:underline; }
+  #mainMedia {
+    display:block; max-width:100%; max-height:100%; width:auto; height:auto;
+    object-fit:contain; background:#000; box-shadow:0 12px 46px rgba(0,0,0,.5);
+  }
+  #mediaCaption {
+    flex:0 0 auto; max-width:100%; margin-top:12px; padding:5px 16px;
+    color:#fff; font-size:17px; line-height:1.4; text-align:center;
+    background:rgba(0,0,0,.48); border-radius:5px; word-break:break-all;
+    text-shadow:0 1px 5px rgba(0,0,0,.7);
+  }
+  .thumb {
+    flex:0 0 auto; width:112px; height:84px; padding:0; border:2px solid rgba(255,255,255,.85);
+    border-radius:6px; background:rgba(20,20,20,.75); overflow:hidden; cursor:pointer;
+    box-shadow:0 3px 14px rgba(0,0,0,.35); position:relative;
+  }
+  .thumb:hover { border-color:#fff; }
+  .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .thumb .ph {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:30px; background:linear-gradient(145deg,#444,#111);
+  }
+  .thumb[hidden] { display:none; }
+  .thumbLabel {
+    position:absolute; left:0; right:0; bottom:0; padding:2px 4px;
+    font-size:11px; color:#fff; background:rgba(0,0,0,.55); text-align:center;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  /* 移动端缩放控件 */
+  #zoomCtl {
+    position:absolute; z-index:12; right:14px; bottom:18px;
+    display:flex; flex-direction:column; gap:9px;
+  }
+  #zoomCtl button {
+    width:46px; height:46px; border:0; border-radius:50%;
+    background:rgba(255,255,255,.95); color:#222; font-size:24px; line-height:1;
+    cursor:pointer; box-shadow:0 3px 14px rgba(0,0,0,.3);
+    -webkit-tap-highlight-color:transparent;
+  }
+  #zoomCtl button:active { background:#e6e6e6; }
+  #zoomCtl[hidden] { display:none; }
+  /* 移动端适配：媒体层与按钮尺寸 */
+  @media (max-width:700px){
+    #bar { height:52px; }
+    #title { font-size:15px; }
+    #counter { font-size:12px; margin-left:6px; }
+    #close { width:38px; height:38px; top:10px; right:10px; font-size:24px; }
+    .nav { width:44px; height:44px; font-size:30px; }
+    #prevNav { left:8px; } #nextNav { right:8px; }
+    #strip { gap:8px; max-width:calc(100vw - 108px); }
+    #mainBox { width:calc(100vw - 140px); height:auto; min-width:0; }
+    #mediaHolder { flex:0 0 auto; }
+    #mainMedia { max-height:52vh; }
+    .thumb { width:56px; height:46px; }
+    #mediaCaption { font-size:13px; margin-top:8px; padding:4px 10px; }
+    #zoomCtl { right:10px; bottom:12px; }
+    #zoomCtl button { width:42px; height:42px; font-size:22px; }
   }
 </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="spinner"></div>
-  <div id="loading-text">地图加载中…</div>
+<div id="errTip" style="display:none;position:fixed;z-index:99;left:50%;top:50%;transform:translate(-50%,-50%);max-width:88vw;background:#fff;border:2px solid #c62828;border-radius:10px;padding:22px 26px;box-shadow:0 8px 40px rgba(0,0,0,.3);color:#222;font-size:15px;line-height:1.8;">
+  <b style="color:#c62828;font-size:18px;">底图未能加载</b><br>
+  请确保 <code>底图.webp</code>、<code>素材</code>、<code>缩略图</code> 三个文件/文件夹与本页面放在<b>同一个文件夹</b>里，<br>
+  并且是<b>先解压整个压缩包</b>、再打开解压出来的 <code>index.html</code>（不要直接在压缩包里双击）。
 </div>
-
 <div id="stage">
   <div id="canvas">
-    <img id="basemap" src="basemap.webp" alt="" fetchpriority="high">
-    <button class="hot" style="left:1150px;top:1088px" data-i="0" aria-label=""></button>
-    <button class="hot" style="left:1726px;top:1099px" data-i="1" aria-label=""></button>
-    <button class="hot" style="left:1205px;top:1135px" data-i="2" aria-label=""></button>
-    <button class="hot" style="left:1151px;top:1234px" data-i="3" aria-label=""></button>
-    <button class="hot" style="left:1179px;top:1267px" data-i="4" aria-label=""></button>
-    <button class="hot" style="left:1166px;top:1280px" data-i="5" aria-label=""></button>
-    <button class="hot" style="left:1134px;top:1347px" data-i="6" aria-label=""></button>
-    <button class="hot" style="left:1077px;top:1646px" data-i="7" aria-label=""></button>
-    <button class="hot" style="left:1098px;top:2060px" data-i="8" aria-label=""></button>
-    <button class="hot" style="left:1190px;top:2379px" data-i="9" aria-label=""></button>
-    <button class="hot" style="left:1192px;top:2549px" data-i="10" aria-label=""></button>
-    <button class="hot" style="left:1209px;top:2543px" data-i="11" aria-label=""></button>
-    <button class="hot" style="left:1157px;top:2602px" data-i="12" aria-label=""></button>
-    <button class="hot" style="left:1275px;top:2669px" data-i="13" aria-label=""></button>
+    <img id="basemap" src="底图.webp" alt="汛期南盘江水系脉络图">
+  </div>
+  <div id="zoomCtl">
+    <button id="zoomIn" aria-label="放大">+</button>
+    <button id="zoomOut" aria-label="缩小">&#8722;</button>
+    <button id="zoomFit" aria-label="复位全图">&#8634;</button>
   </div>
 </div>
 
 <div id="viewer">
   <div id="mask"></div>
-  <button id="prev" class="nav" aria-label="上一张">&#8249;</button>
-  <div id="media-frame"></div>
-  <button id="next" class="nav" aria-label="下一张">&#8250;</button>
+  <div id="bar"><span id="title"></span><span id="counter"></span></div>
   <button id="close" aria-label="关闭">&#215;</button>
+  <button id="prevNav" class="nav" aria-label="上一项">&#8249;</button>
+  <div id="strip">
+    <button id="thumbPrev" class="thumb" aria-label="上一个素材预览"><span class="ph">&#9654;</span></button>
+    <div id="mainBox">
+      <div id="mediaHolder"></div>
+      <div id="mediaCaption"></div>
+    </div>
+    <button id="thumbNext" class="thumb" aria-label="下一个素材预览"><span class="ph">&#9654;</span></button>
+  </div>
+  <button id="nextNav" class="nav" aria-label="下一项">&#8250;</button>
 </div>
 
 <script>
-/* 每个菱形点位对应的媒体文件（依据局部放大图校正点位对应关系） */
-var MEDIA = [
-  ["金家营养鸭场1.jpg","金家营养鸭场2.jpg"],                              // 0  金家营养鸭场
-  ["磷化工企业排口.mp4"],                                                 // 1  磷化工企业排口
-  ["下燕子窝涌水点.mp4"],                                                 // 2  下燕子窝涌水点
-  ["花城警苑黑臭水体.jpg"],                                               // 3  花城警苑黑臭水体
-  ["骆家营村污水直排1.jpg","骆家营村污水直排2.jpg","罗家营村污水直排3.jpg"], // 4 骆家营污水直排（右上菱形）
-  ["化鱼村黑臭坑塘图片1.jpg","化鱼村黑臭坑塘图片2.jpg","化鱼村黑臭坑塘图片3.jpg"], // 5 化鱼村黑臭坑塘（左下菱形）
-  ["西河1.jpg","西河2.jpg"],                                              // 6  西河
-  ["禄丰水电站.mp4"],                                                     // 7  禄丰水电站
-  ["大沟边河农田淹水.jpg","大沟边河农田淹水2.jpg"],                        // 8  大沟边河农田淹水
-  ["巡检司镇污水溢流.jpg","巡检司镇污水溢流视频.mp4"],                     // 9  巡检司镇污水溢流
-  ["小龙潭镇段山体滑坡.jpg"],                                             // 10 小龙潭镇段山体滑坡（左菱形）
-  ["热电循环产业园区污水处理厂.mp4"],                                     // 11 热电循环产业园区污水处理厂（右菱形）
-  ["小龙潭粪污直排1.jpg","小龙潭粪污直排2.jpg"],                           // 12 小龙潭镇粪污直排（左下菱形）
-  ["开远县粪污直排1.jpg","开远县粪污直排2.jpg"]                            // 13 开远县粪污直排
+/* 点位数据：坐标来自 -2 图紫色菱形紫色填充的质心；按钮尺寸覆盖紫色填充及黑色外框 */
+var DATA = [
+  { name:"金家营养鸭场", desc:"养殖粪污", x:1162.9, y:1110.0, media:[
+    {p:"素材/m00_1.mp4", t:"缩略图/t00_1.jpg", v:1, l:"金家营养鸭场1"},
+    {p:"素材/m00_2.jpg", t:"缩略图/t00_2.jpg", v:0, l:"金家营养鸭场2"},
+    {p:"素材/m00_3.jpg", t:"缩略图/t00_3.jpg", v:0, l:"金家营养鸭场3"}]},
+  { name:"磷化工企业排口", desc:"工业排污", x:1738.9, y:1121.0, media:[
+    {p:"素材/m01_1.mp4", t:"缩略图/t01_1.jpg", v:1, l:"磷化工企业排口1"},
+    {p:"素材/m01_2.mp4", t:"缩略图/t01_2.jpg", v:1, l:"磷化工企业排口2"}]},
+  { name:"下燕子窝涌水点", desc:"涌水点", x:1217.9, y:1157.0, media:[
+    {p:"素材/m02_1.mp4", t:"缩略图/t02_1.jpg", v:1, l:"下燕子窝涌水点"}]},
+  { name:"花城警苑黑臭水体", desc:"黑臭水体", x:1159.9, y:1240.0, media:[
+    {p:"素材/m03_1.jpg", t:"缩略图/t03_1.jpg", v:0, l:"花城警苑黑臭水体"}]},
+  { name:"骆家营村污水直排", desc:"污水直排", x:1202.9, y:1279.0, media:[
+    {p:"素材/m04_1.jpg", t:"缩略图/t04_1.jpg", v:0, l:"骆家营村污水直排1"},
+    {p:"素材/m04_2.jpg", t:"缩略图/t04_2.jpg", v:0, l:"骆家营村污水直排2"},
+    {p:"素材/m04_3.jpg", t:"缩略图/t04_3.jpg", v:0, l:"骆家营村污水直排3"}]},
+  { name:"化鱼村黑臭坑塘", desc:"黑臭水体", x:1190.9, y:1318.0, media:[
+    {p:"素材/m05_1.mp4", t:"缩略图/t05_1.jpg", v:1, l:"化鱼村黑臭坑塘1"}]},
+  { name:"花卉堆弃", desc:"养殖粪污", x:1194.9, y:1367.0, media:[
+    {p:"素材/m06_1.mp4", t:"缩略图/t06_1.jpg", v:1, l:"花卉堆弃1"},
+    {p:"素材/m06_2.mp4", t:"缩略图/t06_2.jpg", v:1, l:"花卉堆弃2"},
+    {p:"素材/m06_3.jpg", t:"缩略图/t06_3.jpg", v:0, l:"花卉堆弃3"}]},
+  { name:"西河", desc:"西河", x:1135.9, y:1377.0, media:[
+    {p:"素材/m07_1.jpg", t:"缩略图/t07_1.jpg", v:0, l:"西河1"},
+    {p:"素材/m07_2.jpg", t:"缩略图/t07_2.jpg", v:0, l:"西河2"}]},
+  { name:"竹山镇生活污水收集不到位", desc:"污水直排", x:1117.9, y:1639.0, media:[
+    {p:"素材/m08_1.mp4", t:"缩略图/t08_1.jpg", v:1, l:"竹山镇生活污水收集不到位1"},
+    {p:"素材/m08_2.mp4", t:"缩略图/t08_2.jpg", v:1, l:"竹山镇生活污水收集不到位2"}]},
+  { name:"禄丰水电站", desc:"水电站", x:1094.9, y:1683.0, media:[
+    {p:"素材/m09_1.mp4", t:"缩略图/t09_1.jpg", v:1, l:"禄丰水电站"}]},
+  { name:"大沟边河农田淹水", desc:"水土流失", x:1110.9, y:2083.0, media:[
+    {p:"素材/m10_1.jpg", t:"缩略图/t10_1.jpg", v:0, l:"大沟边河农田淹水1"},
+    {p:"素材/m10_2.jpg", t:"缩略图/t10_2.jpg", v:0, l:"大沟边河农田淹水2"}]},
+  { name:"婆兮大桥水土流失", desc:"山体滑坡", x:1125.9, y:2099.0, media:[
+    {p:"素材/m11_1.mp4", t:"缩略图/t11_1.jpg", v:1, l:"婆兮大桥水土流失1"},
+    {p:"素材/m11_2.jpg", t:"缩略图/t11_2.jpg", v:0, l:"婆兮大桥水土流失2"},
+    {p:"素材/m11_3.jpg", t:"缩略图/t11_3.jpg", v:0, l:"婆兮大桥水土流失3"}]},
+  { name:"柑橘种植", desc:"农田淹水", x:1112.9, y:2163.0, media:[
+    {p:"素材/m12_1.mp4", t:"缩略图/t12_1.jpg", v:1, l:"柑橘种植"}]},
+  { name:"热电循环产业园区污水处理厂", desc:"工业排污", x:1222.4, y:2564.7, media:[
+    {p:"素材/m13_1.mp4", t:"缩略图/t13_1.jpg", v:1, l:"热电循环产业园区污水处理厂1"},
+    {p:"素材/m13_2.mp4", t:"缩略图/t13_2.jpg", v:1, l:"热电循环产业园区污水处理厂2"}]},
+  { name:"小龙潭镇段山体滑坡", desc:"山体滑坡", x:1204.9, y:2571.1, media:[
+    {p:"素材/m14_1.jpg", t:"缩略图/t14_1.jpg", v:0, l:"小龙潭镇段山体滑坡"}]},
+  { name:"小龙潭粪污直排", desc:"养殖粪污", x:1169.9, y:2624.0, media:[
+    {p:"素材/m15_1.jpg", t:"缩略图/t15_1.jpg", v:0, l:"小龙潭粪污直排1"},
+    {p:"素材/m15_2.jpg", t:"缩略图/t15_2.jpg", v:0, l:"小龙潭粪污直排2"},
+    {p:"素材/m15_3.jpg", t:"缩略图/t15_3.jpg", v:0, l:"小龙潭粪污直排3"}]},
+  { name:"开远县粪污直排", desc:"养殖粪污", x:1287.9, y:2691.0, media:[
+    {p:"素材/m16_1.jpg", t:"缩略图/t16_1.jpg", v:0, l:"开远县粪污直排1"},
+    {p:"素材/m16_2.jpg", t:"缩略图/t16_2.jpg", v:0, l:"开远县粪污直排2"},
+    {p:"素材/m16_3.jpg", t:"缩略图/t16_3.jpg", v:0, l:"开远县粪污直排3"},
+    {p:"素材/m16_4.jpg", t:"缩略图/t16_4.jpg", v:0, l:"开远县粪污直排4"}]},
+  { name:"红河排洪沟", desc:"红河排洪沟", x:1271.9, y:2950.0, media:[
+    {p:"素材/m17_1.mp4", t:"缩略图/t17_1.jpg", v:1, l:"红河排洪沟"}]}
 ];
 
-var stage = document.getElementById('stage');
-var canvas = document.getElementById('canvas');
-var viewer = document.getElementById('viewer');
-var mask = document.getElementById('mask');
-var frame = document.getElementById('media-frame');
-var prevBtn = document.getElementById('prev');
-var nextBtn = document.getElementById('next');
-var closeBtn = document.getElementById('close');
-var W = 3553, H = 3477;
-var scale = 1, tx = 0, ty = 0;
-var dragging = false, moved = false, sx = 0, sy = 0, stx = 0, sty = 0;
-var list = [], cur = 0, opened = false;
-
-function apply() {
-  canvas.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+var stage=document.getElementById('stage'), canvas=document.getElementById('canvas');
+var viewer=document.getElementById('viewer'), mainBox=document.getElementById('mainBox');
+var mediaHolder=document.getElementById('mediaHolder'), mediaCaption=document.getElementById('mediaCaption');
+var titleEl=document.getElementById('title'), counterEl=document.getElementById('counter');
+var prevNav=document.getElementById('prevNav'), nextNav=document.getElementById('nextNav');
+var thumbPrev=document.getElementById('thumbPrev'), thumbNext=document.getElementById('thumbNext');
+var W=3553, H=3477, scale=1, tx=0, ty=0;
+var dragging=false, moved=false, sx=0, sy=0, stx=0, sty=0;
+var point=-1, cur=0, opened=false;
+/* 多点触控状态：pointers 记录每个触点的画布内坐标 */
+var pointers={}, pinchDist=0, pinchScale=1, pinchMid={x:0,y:0}, pinchTx=0, pinchTy=0;
+function localPt(e){ var r=stage.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+function twoPts(){ var a=[]; for(var k in pointers) a.push(pointers[k]); return a; }
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+function clampScale(s){ return Math.max(0.05, Math.min(12, s)); }
+function zoomAt(px,py,ns){
+  ns=clampScale(ns); var k=ns/scale;
+  tx=px-(px-tx)*k; ty=py-(py-ty)*k; scale=ns; apply();
 }
 
-function fit() {
-  scale = Math.min(stage.clientWidth / W, stage.clientHeight / H);
-  tx = (stage.clientWidth - W * scale) / 2;
-  ty = (stage.clientHeight - H * scale) / 2;
+/* 生成隐形菱形触发按钮：25x38px 覆盖菱形紫色填充与黑色外框 */
+(function(){
+  for(var i=0;i<DATA.length;i++){
+    var b=document.createElement('button');
+    b.className='hot';
+    b.setAttribute('data-i',i);
+    b.setAttribute('aria-label',DATA[i].name+'（'+DATA[i].desc+'）');
+    b.style.left=(DATA[i].x-12.5)+'px';
+    b.style.top=(DATA[i].y-18)+'px';
+    b.addEventListener('click',function(e){
+      if(moved) return;
+      e.stopPropagation();
+      openViewer(parseInt(this.getAttribute('data-i'),10));
+    });
+    canvas.appendChild(b);
+  }
+})();
+
+function apply(){ canvas.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; }
+/* 取视口尺寸并兜底：某些浏览器在脚本执行时 clientWidth 可能为 0，
+   若不兜底会导致 scale=0、底图被缩成一个点，表现为“白屏/打不开” */
+function viewSize(){
+  var w=stage.clientWidth||window.innerWidth||document.documentElement.clientWidth||1024;
+  var h=stage.clientHeight||window.innerHeight||document.documentElement.clientHeight||768;
+  return {w:w,h:h};
+}
+function fit(){
+  var v=viewSize(), vw=v.w, vh=v.h;
+  if(!vw||!vh) { vw=1024; vh=768; }
+  /* 手机等窄屏首次进入按宽度铺满，便于阅读；宽屏保留整图适配 */
+  var isNarrow = Math.min(vw,vh) < 700;
+  scale = isNarrow ? vw/W : Math.min(vw/W,vh/H);
+  if(!(scale>0)) scale=Math.min(vw/W,vh/H); /* 二次兜底，绝不允许 0 */
+  if(!(scale>0)) scale=0.2;
+  scale=clampScale(scale);
+  tx=(vw-W*scale)/2;
+  ty=(vh-H*scale)/2;
+  if(isNarrow && ty>0) ty=0;
   apply();
 }
-
-stage.addEventListener('wheel', function (e) {
-  if (opened) return;
+/* 鼠标滚轮缩放 */
+stage.addEventListener('wheel',function(e){
+  if(opened) return;
   e.preventDefault();
-  var r = stage.getBoundingClientRect();
-  var px = e.clientX - r.left;
-  var py = e.clientY - r.top;
-  var factor = Math.exp(-e.deltaY * 0.0016);
-  var ns = Math.max(0.05, Math.min(10, scale * factor));
-  var k = ns / scale;
-  tx = px - (px - tx) * k;
-  ty = py - (py - ty) * k;
-  scale = ns;
-  apply();
-}, { passive:false });
+  var r=stage.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+  zoomAt(px,py,scale*Math.exp(-e.deltaY*0.0016));
+},{passive:false});
 
-stage.addEventListener('pointerdown', function (e) {
-  if (opened || e.button !== 0) return;
-  dragging = true;
-  moved = false;
-  sx = e.clientX; sy = e.clientY;
-  stx = tx; sty = ty;
-  stage.classList.add('grabbing');
-});
-
-window.addEventListener('pointermove', function (e) {
-  if (!dragging) return;
-  var dx = e.clientX - sx, dy = e.clientY - sy;
-  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
-  tx = stx + dx; ty = sty + dy;
-  apply();
-});
-
-window.addEventListener('pointerup', function () {
-  dragging = false;
-  stage.classList.remove('grabbing');
-});
-
-function stopCurrent() {
-  var old = frame.querySelector('video');
-  if (old) {
-    try { old.pause(); old.removeAttribute('src'); old.load(); } catch (err) {}
+/* 触点按下：单指拖动，双指进入捏合 */
+stage.addEventListener('pointerdown',function(e){
+  if(opened) return;
+  if(e.pointerType==='mouse' && e.button!==0) return;
+  /* 仅触摸/触控笔需要捕获指针以支持移出元素后的拖动；
+     鼠标绝不能捕获，否则 click 会被派发到 stage 而非菱形按钮，导致电脑上点不出来 */
+  if(e.pointerType!=='mouse'){ try{ stage.setPointerCapture(e.pointerId); }catch(err){} }
+  var p=localPt(e);
+  pointers[e.pointerId]={x:p.x,y:p.y};
+  var pts=twoPts();
+  if(pts.length===1){
+    dragging=true; moved=false; sx=p.x; sy=p.y; stx=tx; sty=ty;
+    stage.classList.add('grabbing');
+  }else if(pts.length===2){
+    dragging=false; moved=true;
+    pinchDist=dist(pts[0],pts[1])||1;
+    pinchScale=scale; pinchTx=tx; pinchTy=ty;
+    pinchMid={x:(pts[0].x+pts[1].x)/2, y:(pts[0].y+pts[1].y)/2};
+    stage.classList.remove('grabbing');
   }
-  frame.innerHTML = '';
-}
+});
 
-function showHint(text) {
-  var d = document.createElement('div');
-  d.className = 'hint';
-  d.innerHTML = '<div class="spinner"></div><div class="hint-text"></div>';
-  d.querySelector('.hint-text').textContent = text;
-  frame.appendChild(d);
-  return d;
-}
-
-function setHintText(hint, text) {
-  var t = hint && hint.querySelector('.hint-text');
-  if (t) t.textContent = text;
-}
-
-function render() {
-  stopCurrent();
-  if (!list.length) return;
-  var name = list[cur];
-  var el;
-
-  if (/\.mp4$/i.test(name)) {
-    el = document.createElement('video');
-    el.src = name;
-    el.controls = true;
-    el.playsInline = true;
-    el.setAttribute('playsinline', '');
-    el.preload = 'auto';
-    el.loop = false;
-    frame.appendChild(el);
-
-    var hint = showHint('视频加载中…');
-    var started = false;
-    var ready = function () {
-      if (started) return;
-      started = true;
-      hint.remove();
-    };
-    /* 任一就绪信号都撤掉提示；再加超时兜底，避免遮罩常驻 */
-    el.addEventListener('loadeddata', ready);
-    el.addEventListener('canplay', ready);
-    el.addEventListener('playing', ready);
-    el.addEventListener('timeupdate', ready);
-    setTimeout(ready, 15000);
-    el.addEventListener('progress', function () {
-      if (started) return;
-      try {
-        if (el.buffered && el.buffered.length && el.duration) {
-          var pct = Math.min(99, Math.round(el.buffered.end(el.buffered.length - 1) / el.duration * 100));
-          setHintText(hint, '视频缓冲中… ' + pct + '%');
-        }
-      } catch (err) {}
-    });
-    el.addEventListener('error', function () {
-      setHintText(hint, '视频加载失败，请检查网络后重试');
-    });
-
-    /* 用户点击手势触发，优先带声音自动播放；若被浏览器拦截则静音播放 */
-    var p = el.play();
-    if (p && typeof p.catch === 'function') {
-      p.catch(function () {
-        el.muted = true;
-        var p2 = el.play();
-        if (p2 && typeof p2.catch === 'function') p2.catch(function () {});
-      });
-    }
-  } else {
-    el = document.createElement('img');
-    el.alt = '';
-    frame.appendChild(el);
-    var ihint = showHint('图片加载中…');
-    el.onload = function () { ihint.remove(); };
-    el.onerror = function () { setHintText(ihint, '图片加载失败，请检查网络后重试'); };
-    el.src = name;
+/* 触点移动 */
+window.addEventListener('pointermove',function(e){
+  if(opened) return;
+  if(!(e.pointerId in pointers)) return;
+  var p=localPt(e);
+  pointers[e.pointerId]={x:p.x,y:p.y};
+  var pts=twoPts();
+  if(pts.length>=2){
+    var d=dist(pts[0],pts[1]);
+    var ns=clampScale(pinchScale*d/pinchDist);
+    var mid={x:(pts[0].x+pts[1].x)/2, y:(pts[0].y+pts[1].y)/2};
+    /* 以两指中点为锚点缩放：让“按下瞬间位于中点的地图内容点”缩放后仍停在中点。
+       k 必须相对初始 pinchScale（与 pinchTx/pinchMid 同一基准），
+       不能用 ns/scale（上一帧基准），否则逐帧累乘导致焦点漂移。 */
+    var k=ns/pinchScale;
+    tx=mid.x-(pinchMid.x-pinchTx)*k;
+    ty=mid.y-(pinchMid.y-pinchTy)*k;
+    scale=ns; moved=true; apply();
+  }else if(dragging && pts.length===1){
+    var dx=p.x-sx, dy=p.y-sy;
+    if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true;
+    tx=stx+dx; ty=sty+dy; apply();
   }
+});
 
-  var many = list.length > 1;
-  prevBtn.hidden = !many;
-  nextBtn.hidden = !many;
+/* 触点抬起/取消 */
+function endPointer(e){
+  delete pointers[e.pointerId];
+  var pts=twoPts();
+  if(pts.length===1){
+    /* 从双指回到单指，用剩余触点重置拖动基准，避免跳变 */
+    dragging=true; moved=true;
+    sx=pts[0].x; sy=pts[0].y; stx=tx; sty=ty;
+    stage.classList.add('grabbing');
+  }else if(pts.length===0){
+    dragging=false; pinchDist=0; stage.classList.remove('grabbing');
+    setTimeout(function(){ moved=false; },0);
+  }
 }
+window.addEventListener('pointerup',endPointer);
+window.addEventListener('pointercancel',endPointer);
 
-function openViewer(i) {
-  list = MEDIA[i] || [];
-  if (!list.length) return;   /* 无媒体文件时不弹出 */
-  cur = 0;
-  opened = true;
+/* 双击放大（桌面） */
+stage.addEventListener('dblclick',function(e){
+  if(opened) return;
+  var r=stage.getBoundingClientRect();
+  zoomAt(e.clientX-r.left, e.clientY-r.top, scale*(scale<1?2.4:1.6));
+});
+
+/* 屏幕缩放按钮 */
+function zoomCenter(f){
+  var r=stage.getBoundingClientRect();
+  zoomAt(r.width/2, r.height/2, scale*f);
+}
+document.getElementById('zoomIn').addEventListener('pointerdown',function(e){e.stopPropagation();});
+document.getElementById('zoomOut').addEventListener('pointerdown',function(e){e.stopPropagation();});
+document.getElementById('zoomFit').addEventListener('pointerdown',function(e){e.stopPropagation();});
+document.getElementById('zoomIn').addEventListener('click',function(e){e.stopPropagation();zoomCenter(1.5);});
+document.getElementById('zoomOut').addEventListener('click',function(e){e.stopPropagation();zoomCenter(1/1.5);});
+document.getElementById('zoomFit').addEventListener('click',function(e){e.stopPropagation();fit();});
+
+function stopMedia(){
+  var old=mediaHolder.querySelector('video');
+  if(old){ try{ old.pause(); old.removeAttribute('src'); old.load(); }catch(err){} }
+  mediaHolder.innerHTML='';
+  mediaCaption.textContent='';
+}
+/* 视频 9 秒仍未起播时，浮层提示并给直链（弱网/解码不支持时的退路） */
+function slowTip(v,item){
+  var t=document.createElement('div');
+  t.className='slowTip';
+  t.appendChild(document.createTextNode('视频加载较慢'));
+  var a=document.createElement('a');
+  a.href=item.p; a.target='_blank'; a.rel='noopener'; a.textContent='在新窗口播放';
+  t.appendChild(a);
+  var done=false;
+  function clear(){ done=true; if(t.parentNode) t.parentNode.removeChild(t); }
+  v.addEventListener('playing',clear);
+  v.addEventListener('timeupdate',function(){ if(v.currentTime>0.2) clear(); });
+  v.addEventListener('error',function(){ if(!done && mediaHolder.contains(v)) mediaHolder.appendChild(t); });
+  setTimeout(function(){ if(!done && (!v.readyState || v.readyState<3)) mediaHolder.appendChild(t); },9000);
+}
+function fillThumb(el,item){
+  el.innerHTML='';
+  var img=document.createElement('img');
+  img.src=item?item.t:'';
+  img.alt='';
+  img.onerror=function(){ el.innerHTML='<span class="ph">&#9654;</span>'; };
+  el.appendChild(img);
+  if(item){
+    var lb=document.createElement('div'); lb.className='thumbLabel'; lb.textContent=item.l;
+    el.appendChild(lb);
+  }
+}
+function render(){
+  stopMedia();
+  if(point<0) return;
+  var list=DATA[point].media, item=list[cur], el;
+  if(item.v){
+    el=document.createElement('video');
+    el.src=item.p; el.controls=true; el.playsInline=true;
+    el.setAttribute('playsinline',''); el.loop=false;
+    el.id='mainMedia';
+    mediaHolder.appendChild(el);
+    slowTip(el,item);
+    var p=el.play();
+    if(p&&p.catch) p.catch(function(){ el.muted=true; var q=el.play(); if(q&&q.catch) q.catch(function(){}); });
+  }else{
+    el=document.createElement('img');
+    el.src=item.p; el.alt=item.l;
+    el.id='mainMedia';
+    mediaHolder.appendChild(el);
+  }
+  titleEl.textContent=DATA[point].name;
+  counterEl.textContent=(cur+1)+' / '+list.length+'  '+item.l;
+  mediaCaption.textContent=item.l;
+  var many=list.length>1;
+  prevNav.hidden=!many; nextNav.hidden=!many;
+  thumbPrev.hidden=!many; thumbNext.hidden=!many;
+  if(many){
+    fillThumb(thumbPrev,list[(cur-1+list.length)%list.length]);
+    fillThumb(thumbNext,list[(cur+1)%list.length]);
+  }
+}
+function openViewer(i){
+  if(!DATA[i]||!DATA[i].media.length) return;
+  point=i; cur=0; opened=true;
   viewer.classList.add('open');
+  document.getElementById('zoomCtl').hidden=true;
   render();
 }
-
-function closeViewer() {
-  if (!opened) return;
-  opened = false;
-  stopCurrent();
+function closeViewer(){
+  if(!opened) return;
+  stopMedia(); opened=false; point=-1;
   viewer.classList.remove('open');
+  document.getElementById('zoomCtl').hidden=false;
 }
-
-function step(d) {
-  if (!opened || list.length < 2) return;
-  cur = (cur + d + list.length) % list.length;
-  render();
+function step(d){
+  if(!opened||point<0) return;
+  var n=DATA[point].media.length;
+  if(n<2) return;
+  cur=(cur+d+n)%n; render();
 }
-
-prevBtn.addEventListener('click', function (e) { e.stopPropagation(); step(-1); });
-nextBtn.addEventListener('click', function (e) { e.stopPropagation(); step(1); });
-closeBtn.addEventListener('click', function (e) { e.stopPropagation(); closeViewer(); });
-mask.addEventListener('click', closeViewer);
-document.addEventListener('keydown', function (e) {
-  if (!opened) return;
-  if (e.key === 'Escape') closeViewer();
-  else if (e.key === 'ArrowLeft') step(-1);
-  else if (e.key === 'ArrowRight') step(1);
+document.getElementById('close').addEventListener('click',function(e){ e.stopPropagation(); closeViewer(); });
+document.getElementById('mask').addEventListener('click',closeViewer);
+prevNav.addEventListener('click',function(e){ e.stopPropagation(); step(-1); });
+nextNav.addEventListener('click',function(e){ e.stopPropagation(); step(1); });
+thumbPrev.addEventListener('click',function(e){ e.stopPropagation(); step(-1); });
+thumbNext.addEventListener('click',function(e){ e.stopPropagation(); step(1); });
+document.addEventListener('keydown',function(e){
+  if(!opened) return;
+  if(e.key==='Escape') closeViewer();
+  else if(e.key==='ArrowLeft') step(-1);
+  else if(e.key==='ArrowRight') step(1);
 });
-
-var hots = document.querySelectorAll('.hot');
-for (var j = 0; j < hots.length; j++) {
-  hots[j].addEventListener('click', function (e) {
-    if (moved) return;
-    e.stopPropagation();
-    openViewer(parseInt(this.getAttribute('data-i'), 10));
-  });
-}
-
-window.addEventListener('resize', fit);
+window.addEventListener('resize',fit);
+/* 底图加载失败给出明确提示，避免纯白屏无从排查 */
+(function(){
+  var img=document.getElementById('basemap');
+  if(img && !img.complete){ img.addEventListener('error',function(){ document.getElementById('errTip').style.display='block'; }); }
+  if(img && img.complete && img.naturalWidth===0){ document.getElementById('errTip').style.display='block'; }
+})();
 fit();
-
-/* ===== 底图加载状态 ===== */
-var basemapEl = document.getElementById('basemap');
-var loadingEl = document.getElementById('loading');
-var loadingText = document.getElementById('loading-text');
-
-function basemapDone() {
-  loadingEl.classList.add('done');
-}
-
-if (basemapEl.complete && basemapEl.naturalWidth > 0) {
-  basemapDone();
-} else {
-  basemapEl.addEventListener('load', basemapDone);
-  basemapEl.addEventListener('error', function () {
-    var sp = loadingEl.querySelector('.spinner');
-    if (sp) sp.style.display = 'none';
-    loadingText.textContent = '底图加载失败，请确认网络后刷新页面';
-  });
-}
+/* 图片真正解码完成后再校准一次，防止脚本早于布局执行导致的尺寸偏差 */
+window.addEventListener('load',function(){ fit(); });
+if(document.getElementById('basemap') && document.getElementById('basemap').complete){ fit(); }
 </script>
 </body>
 </html>
